@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { playSwapSound, playMatchSound, playComboSound, playRewardSound, playGameOverSound, playSelectSound } from '../utils/sound';
 
 export type TileType = 'HEART' | 'STRAWBERRY' | 'BLUEBERRY' | 'CAKE' | 'FLOWER';
 
@@ -43,9 +44,11 @@ export const useMatch3 = () => {
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [rewards, setRewards] = useState<{ id: string; text: string; type: 'small' | 'medium' | 'large' | 'combo' }[]>([]);
   
   // We use a ref to track if we are in a "revert swap" phase to avoid match checking loop
   const isRevertingSwap = useRef(false);
+  const comboRef = useRef(0);
 
   // Helper to find matches
   const findMatches = useCallback((currentGrid: Tile[]) => {
@@ -93,11 +96,47 @@ export const useMatch3 = () => {
 
       if (matches.length > 0) {
         setIsProcessing(true);
+        comboRef.current += 1;
+
+        // Play match sound
+        playMatchSound();
+
+        // Determine reward
+        let rewardText = '';
+        let rewardType: 'small' | 'medium' | 'large' | 'combo' = 'small';
+        
+        if (comboRef.current > 1) {
+          rewardText = `Combo x${comboRef.current}!`;
+          rewardType = 'combo';
+          playComboSound();
+        } else if (matches.length >= 8) {
+          rewardText = 'Unbelievable!';
+          rewardType = 'large';
+          playRewardSound();
+        } else if (matches.length >= 5) {
+          rewardText = 'Amazing!';
+          rewardType = 'medium';
+          playRewardSound();
+        } else if (matches.length === 4) {
+          rewardText = 'Tasty!';
+          rewardType = 'small';
+        } else {
+          rewardText = 'Sweet!';
+          rewardType = 'small';
+        }
+
+        const newReward = { id: Math.random().toString(36).substr(2, 9), text: rewardText, type: rewardType };
+        setRewards(prev => [...prev, newReward]);
+        
+        // Auto-clear reward after animation
+        setTimeout(() => {
+          setRewards(prev => prev.filter(r => r.id !== newReward.id));
+        }, 2000); // Increased duration to 2 seconds
 
         // 1. Wait for match animation
         timeoutId = setTimeout(() => {
           // 2. Remove matches and update score
-          setScore(prev => prev + matches.length * 10);
+          setScore(prev => prev + matches.length * 10 * comboRef.current);
           
           const remainingTiles = grid.filter(t => !matches.includes(t.id));
           
@@ -139,6 +178,7 @@ export const useMatch3 = () => {
         setIsProcessing(false);
         if (moves <= 0) {
           setGameOver(true);
+          playGameOverSound();
         }
       }
     };
@@ -156,6 +196,7 @@ export const useMatch3 = () => {
 
     if (!selectedTileId) {
       setSelectedTileId(id);
+      playSelectSound();
       return;
     }
 
@@ -179,10 +220,15 @@ export const useMatch3 = () => {
 
     if (!isAdjacent) {
       setSelectedTileId(id);
+      playSelectSound();
       return;
     }
 
+    // Reset combo for new move
+    comboRef.current = 0;
+
     // Perform Swap
+    playSwapSound();
     const newGrid = grid.map(t => {
       if (t.id === t1.id) return { ...t, x: t2.x, y: t2.y };
       if (t.id === t2.id) return { ...t, x: t1.x, y: t1.y };
@@ -228,6 +274,7 @@ export const useMatch3 = () => {
     selectedTileId,
     isProcessing,
     gameOver,
+    rewards,
     handleTileClick,
     restartGame
   };

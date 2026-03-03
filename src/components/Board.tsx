@@ -2,9 +2,47 @@ import { Tile } from './Tile';
 import { useMatch3 } from '../hooks/useMatch3';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw, Trophy, Move } from 'lucide-react';
+import { FC } from 'react';
+
+const RewardPopup: FC<{ text: string; type: 'small' | 'medium' | 'large' | 'combo'; index: number }> = ({ text, type, index }) => {
+  const variants = {
+    initial: { scale: 0, opacity: 0, y: 20, rotate: -10 },
+    animate: { 
+      scale: type === 'large' ? 1.5 : type === 'medium' ? 1.2 : 1, 
+      opacity: 1, 
+      y: -50 - (index * 40), // Stack vertically
+      rotate: 0,
+      transition: { type: 'spring', stiffness: 300, damping: 20 }
+    },
+    exit: { scale: 2, opacity: 0, filter: 'blur(10px)', transition: { duration: 0.3 } }
+  };
+
+  const colors = {
+    small: 'text-pink-500',
+    medium: 'text-purple-600',
+    large: 'text-yellow-500',
+    combo: 'text-orange-500'
+  };
+
+  return (
+    <motion.div
+      layout
+      variants={variants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className={`absolute inset-0 flex items-center justify-center pointer-events-none z-50`}
+      style={{ zIndex: 50 + index }}
+    >
+      <h2 className={`text-5xl font-black ${colors[type]} drop-shadow-lg stroke-white tracking-wider whitespace-nowrap`}>
+        {text}
+      </h2>
+    </motion.div>
+  );
+};
 
 export const Board = () => {
-  const { grid, score, moves, selectedTileId, gameOver, handleTileClick, restartGame } = useMatch3();
+  const { grid, score, moves, selectedTileId, gameOver, rewards, handleTileClick, restartGame } = useMatch3();
   
   // Board dimensions
   const GRID_SIZE = 8;
@@ -53,6 +91,18 @@ export const Board = () => {
                 onClick={handleTileClick}
                 width={TILE_SIZE}
                 height={TILE_SIZE}
+              />
+            ))}
+          </AnimatePresence>
+          
+          {/* Reward Popup */}
+          <AnimatePresence>
+            {rewards.map((reward, index) => (
+              <RewardPopup 
+                key={reward.id} 
+                text={reward.text} 
+                type={reward.type} 
+                index={index}
               />
             ))}
           </AnimatePresence>
