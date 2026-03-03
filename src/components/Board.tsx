@@ -2,7 +2,7 @@ import { Tile } from './Tile';
 import { useMatch3 } from '../hooks/useMatch3';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw, Trophy, Move } from 'lucide-react';
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 
 const RewardPopup: FC<{ text: string; type: 'small' | 'medium' | 'large' | 'combo'; index: number }> = ({ text, type, index }) => {
   const variants = {
@@ -34,7 +34,7 @@ const RewardPopup: FC<{ text: string; type: 'small' | 'medium' | 'large' | 'comb
       className={`absolute inset-0 flex items-center justify-center pointer-events-none z-50`}
       style={{ zIndex: 50 + index }}
     >
-      <h2 className={`text-5xl font-black ${colors[type]} drop-shadow-lg stroke-white tracking-wider whitespace-nowrap`}>
+      <h2 className={`text-3xl md:text-5xl font-black ${colors[type]} drop-shadow-lg stroke-white tracking-wider whitespace-nowrap`}>
         {text}
       </h2>
     </motion.div>
@@ -44,30 +44,47 @@ const RewardPopup: FC<{ text: string; type: 'small' | 'medium' | 'large' | 'comb
 export const Board = () => {
   const { grid, score, moves, selectedTileId, gameOver, rewards, handleTileClick, restartGame } = useMatch3();
   
-  // Board dimensions
+  // Responsive Board dimensions
   const GRID_SIZE = 8;
-  const TILE_SIZE = 60; // Base size, can be responsive
-  const BOARD_SIZE = GRID_SIZE * TILE_SIZE;
+  const [tileSize, setTileSize] = useState(60);
+
+  useEffect(() => {
+    const handleResize = () => {
+      // Calculate max available width (screen width - padding)
+      // We want some padding on sides (e.g., 24px total)
+      // And we need to account for the board border/padding (approx 16px)
+      const maxBoardWidth = Math.min(window.innerWidth - 32, 500); 
+      const newTileSize = Math.floor((maxBoardWidth - 16) / GRID_SIZE);
+      // Cap at 60px, min 30px
+      setTileSize(Math.max(30, Math.min(newTileSize, 60)));
+    };
+
+    handleResize(); // Initial calculation
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const BOARD_SIZE = GRID_SIZE * tileSize;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 p-4 font-sans">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 p-4 font-sans overflow-hidden">
       
       {/* Header / Stats */}
-      <div className="flex gap-8 mb-8 bg-white/60 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-white/40">
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-2 text-pink-500 font-bold uppercase text-xs tracking-wider mb-1">
-            <Trophy size={14} /> Score
+      <div className="flex gap-4 md:gap-8 mb-4 md:mb-8 bg-white/60 backdrop-blur-xl p-3 md:p-4 rounded-2xl shadow-lg border border-white/40 z-10">
+        <div className="flex flex-col items-center min-w-[60px]">
+          <div className="flex items-center gap-1 md:gap-2 text-pink-500 font-bold uppercase text-[10px] md:text-xs tracking-wider mb-1">
+            <Trophy size={12} className="md:w-3.5 md:h-3.5" /> Score
           </div>
-          <span className="text-2xl font-black text-gray-800 font-mono">{score}</span>
+          <span className="text-xl md:text-2xl font-black text-gray-800 font-mono">{score}</span>
         </div>
         
-        <div className="w-px bg-gray-300/50 h-12 self-center"></div>
+        <div className="w-px bg-gray-300/50 h-10 md:h-12 self-center"></div>
 
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-2 text-purple-500 font-bold uppercase text-xs tracking-wider mb-1">
-            <Move size={14} /> Moves
+        <div className="flex flex-col items-center min-w-[60px]">
+          <div className="flex items-center gap-1 md:gap-2 text-purple-500 font-bold uppercase text-[10px] md:text-xs tracking-wider mb-1">
+            <Move size={12} className="md:w-3.5 md:h-3.5" /> Moves
           </div>
-          <span className={`text-2xl font-black font-mono ${moves < 5 ? 'text-red-500' : 'text-gray-800'}`}>
+          <span className={`text-xl md:text-2xl font-black font-mono ${moves < 5 ? 'text-red-500' : 'text-gray-800'}`}>
             {moves}
           </span>
         </div>
@@ -75,7 +92,7 @@ export const Board = () => {
 
       {/* Game Board Container */}
       <div 
-        className="relative bg-white/40 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden"
+        className="relative bg-white/40 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-white/50 overflow-hidden transition-all duration-300 ease-in-out"
         style={{ width: BOARD_SIZE + 16, height: BOARD_SIZE + 16 }}
       >
         <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
@@ -89,8 +106,8 @@ export const Board = () => {
                 tile={tile}
                 isSelected={selectedTileId === tile.id}
                 onClick={handleTileClick}
-                width={TILE_SIZE}
-                height={TILE_SIZE}
+                width={tileSize}
+                height={tileSize}
               />
             ))}
           </AnimatePresence>
@@ -120,17 +137,17 @@ export const Board = () => {
               <motion.div 
                 initial={{ scale: 0.8, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
-                className="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 border-4 border-pink-200"
+                className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl text-center max-w-[90%] md:max-w-sm mx-auto border-4 border-pink-200"
               >
-                <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-3xl font-black text-gray-800 mb-2">Game Over!</h2>
-                <p className="text-gray-500 mb-6">You scored <span className="font-bold text-pink-500">{score}</span> points!</p>
+                <div className="text-5xl md:text-6xl mb-4">🎉</div>
+                <h2 className="text-2xl md:text-3xl font-black text-gray-800 mb-2">Game Over!</h2>
+                <p className="text-gray-500 mb-6 text-sm md:text-base">You scored <span className="font-bold text-pink-500">{score}</span> points!</p>
                 
                 <button
                   onClick={restartGame}
-                  className="w-full py-3 px-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 px-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
                 >
-                  <RefreshCw size={20} />
+                  <RefreshCw size={18} className="md:w-5 md:h-5" />
                   Play Again
                 </button>
               </motion.div>
@@ -140,13 +157,13 @@ export const Board = () => {
       </div>
 
       {/* Footer Controls */}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-6 md:mt-8 flex gap-4">
         <button 
           onClick={restartGame}
           className="p-3 bg-white/50 hover:bg-white/80 rounded-full text-gray-600 hover:text-pink-500 transition-colors shadow-sm backdrop-blur-sm"
           title="Restart Game"
         >
-          <RefreshCw size={24} />
+          <RefreshCw size={20} className="md:w-6 md:h-6" />
         </button>
       </div>
 

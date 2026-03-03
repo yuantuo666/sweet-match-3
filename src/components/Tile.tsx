@@ -44,8 +44,8 @@ export const Tile: FC<TileProps> = ({ tile, isSelected, onClick, width, height }
     >
       <div 
         className={`
-          w-[90%] h-[90%] rounded-2xl shadow-sm border-2 
-          flex items-center justify-center text-3xl select-none
+          w-[90%] h-[90%] rounded-lg md:rounded-2xl shadow-sm border-2 
+          flex items-center justify-center text-xl md:text-3xl select-none
           transition-colors duration-200
           ${BG_COLOR_MAP[tile.type]}
           ${isSelected ? 'ring-4 ring-pink-400 ring-opacity-50 z-10' : 'hover:brightness-95'}
